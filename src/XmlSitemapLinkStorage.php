@@ -54,7 +54,17 @@ class XmlSitemapLinkStorage implements XmlSitemapLinkStorageInterface {
     $this->anonymousUser = new AnonymousUserSession();
   }
 
-  public function create(EntityInterface $entity) {
+  public function create(EntityInterface $entity, $language = NULL) {
+    if ($language) {
+      if ($entity->isTranslatable() && $entity->hasTranslation($language->getId())) {
+        $entity = $entity->getTranslation($language->getId());
+        $uri = $entity->url('canonical', ['language' => $language]); 
+      }
+      else {
+        return;
+      }
+    }
+
     if (!isset($entity->xmlsitemap)) {
       $entity->xmlsitemap = array();
       if ($entity->id() && $link = $this->load($entity->getEntityTypeId(), $entity->id())) {
@@ -63,7 +73,7 @@ class XmlSitemapLinkStorage implements XmlSitemapLinkStorageInterface {
     }
 
     $settings = xmlsitemap_link_bundle_load($entity->getEntityTypeId(), $entity->bundle());
-    $uri = $entity->url();
+    $uri = $uri ?: $entity->url();
     $entity->xmlsitemap += array(
       'type' => $entity->getEntityTypeId(),
       'id' => (string) $entity->id(),
@@ -81,12 +91,18 @@ class XmlSitemapLinkStorage implements XmlSitemapLinkStorageInterface {
       $entity->xmlsitemap['lastmod'] = $entity->getChangedTime();
     }
 
-    $url = $entity->url();
     // The following values must always be checked because they are volatile.
     $entity->xmlsitemap['loc'] = $uri;
-    $entity->xmlsitemap['access'] = isset($url) && $entity->access('view', $this->anonymousUser);
-    $language = $entity->language();
-    $entity->xmlsitemap['language'] = !empty($language) ? $language->getId() : LanguageInterface::LANGCODE_NOT_SPECIFIED;
+    $entity->xmlsitemap['access'] = isset($uri) && $entity->access('view', $this->anonymousUser);
+    $entity_language = $language ?: $entity->language();
+    $entity->xmlsitemap['language'] = !empty($entity_language) ? $entity_language->getId() : LanguageInterface::LANGCODE_NOT_SPECIFIED;
+
+    if (!$language && $entity->isTranslatable()) {
+      foreach ($entity->getTranslationLanguages() as $key => $language) {
+        $translated_entity = $this->create($entity, $language);
+        $this->save($translated_entity);
+      }
+    }
 
     return $entity->xmlsitemap;
   }
@@ -126,7 +142,7 @@ class XmlSitemapLinkStorage implements XmlSitemapLinkStorageInterface {
     }
 
     $queryStatus = \Drupal::database()->merge('xmlsitemap')
-      ->key(array('type' => $link['type'], 'id' => $link['id']))
+      ->key(array('type' => $link['type'], 'id' => $link['id'], 'language' => $link['language']))
       ->fields(array(
         'loc' => $link['loc'],
         'subtype' => $link['subtype'],
@@ -138,7 +154,6 @@ class XmlSitemapLinkStorage implements XmlSitemapLinkStorageInterface {
         'priority_override' => $link['priority_override'],
         'changefreq' => $link['changefreq'],
         'changecount' => $link['changecount'],
-        'language' => $link['language'],
       ))
       ->execute();
 

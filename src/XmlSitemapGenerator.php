@@ -134,10 +134,7 @@ class XmlSitemapGenerator implements XmlSitemapGeneratorInterface {
     $this->setMemoryLimit();
 
     if ($this->state->get('xmlsitemap_developer_mode')) {
-      $this->logger->notice('Starting XML sitemap generation. Memory usage: @memory-peak.', array(
-        '@memory-peak' => format_size(memory_get_peak_usage(TRUE)),
-          ), WATCHDOG_DEBUG
-      );
+      $this->logger->notice('Starting XML sitemap generation. Memory usage: @memory-peak.', ['@memory-peak' => format_size(memory_get_peak_usage(TRUE))]);
     }
   }
 

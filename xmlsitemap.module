@@ -172,9 +172,9 @@ function _xmlsitemap_rebuild_form_access() {
  */
 function xmlsitemap_cron() {
   // If there were no new or changed links, skip.
-  /*if (!\Drupal::state()->get('xmlsitemap_regenerate_needed')) {
+  if (!\Drupal::state()->get('xmlsitemap_regenerate_needed')) {
     return;
-  }*/
+  }
 
   // If the minimum sitemap lifetime hasn't been passed, skip.
   $lifetime = REQUEST_TIME - \Drupal::state()->get('xmlsitemap_generated_last');
@@ -1755,7 +1755,6 @@ function xmlsitemap_query_xmlsitemap_generate_alter(AlterableInterface $query) {
   // Get languages to simplify query building.
   $current = $sitemap->context['language'];
   $default = \Drupal::languageManager()->getDefaultLanguage()->getId();
-
 
   if ($mode == 'mixed' && $current == $default) {
     // If mode is mixed but current = default, is the same as 'simple'.
